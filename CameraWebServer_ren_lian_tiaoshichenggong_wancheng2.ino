@@ -1,7 +1,9 @@
 #include "esp_camera.h"
+//#include <esp_now.h> //ESP-NOW 不能与普通 WiFi STA 模式（连接路由器）同时使用，只能在 WiFi AP 模式或 WiFi 关闭 的情况下稳定工作。
 #include <WiFi.h>
 #include <stdio.h>
-//
+//降低主时钟频率为10 
+//需要增加一个远程复位功能 掉线提示 需要维持视频图传
 // WARNING!!! PSRAM IC required for UXGA resolution and high JPEG quality
 //            Ensure ESP32 Wrover Module or other board with PSRAM is selected
 //            Partial images will be transmitted if image exceeds buffer size
@@ -76,13 +78,16 @@ void setup() {
   config.pin_pwdn = PWDN_GPIO_NUM;
   config.pin_reset = RESET_GPIO_NUM;
   config.xclk_freq_hz = 20000000;
-  config.frame_size = FRAMESIZE_UXGA;
+  //config.frame_size = FRAMESIZE_UXGA; //uxga-->vga降低分辨率
+  config.frame_size = FRAMESIZE_VGA; 
   config.pixel_format = PIXFORMAT_JPEG;  // 用于流式传输
   // 配置像素格式为 PIXFORMAT_RGB565；用于人脸检测/识别
   config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
   config.fb_location = CAMERA_FB_IN_PSRAM;
-  config.jpeg_quality = 12;
-  config.fb_count = 1;
+  //config.jpeg_quality = 12；
+  config.jpeg_quality = 8;  // 提高图像质量（0-63，数值越小质量越高） 
+  //config.fb_count = 1;
+  config.fb_count = 2;  // 增加帧缓冲，提高帧率
 
  // 如果存在 PSRAM 集成电路，则以 UXGA 分辨率和更高的 JPEG 质量进行初始化
  // 以便为更大的预分配帧缓冲区提供支持。
@@ -142,8 +147,10 @@ void setup() {
   setupLedFlash(LED_GPIO_NUM);
 #endif
 
-  WiFi.begin(ssid, password);
-  WiFi.setSleep(false);
+  WiFi.begin(ssid, password); 
+  WiFi.setSleep(false);//关闭休眠提速
+  WiFi.setTxPower(WIFI_POWER_19_5dBm);  // 提高信号强度
+
 
   Serial.print("WiFi connecting");
   while (WiFi.status() != WL_CONNECTED) {
